@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ChainMind.Api/ChainMind.Api.csproj" />
+    <Project Path="src/ChainMind.Application/ChainMind.Application.csproj" />
+    <Project Path="src/ChainMind.Core/ChainMind.Core.csproj" />
+    <Project Path="src/ChainMind.Infrastructure/ChainMind.Infrastructure.csproj" />
+  </Folder>
+</Solution>

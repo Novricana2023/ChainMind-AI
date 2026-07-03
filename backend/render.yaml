@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: chainmind-api
+    runtime: dotnet
+    region: oregon
+    plan: free
+    buildCommand: cd backend && dotnet publish src/ChainMind.Api/ChainMind.Api.csproj -c Release -o out
+    startCommand: cd backend/out && dotnet ChainMind.Api.dll
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: AI__Provider
+        value: ChainMind
+      - key: Cors__AllowedOrigins__0
+        value: https://your-vercel-app.vercel.app
+      - key: Cors__AllowedOrigins__1
+        value: http://localhost:3000
