@@ -1,7 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY ChainMind.sln ./
 COPY src/ChainMind.Api/ChainMind.Api.csproj src/ChainMind.Api/
 COPY src/ChainMind.Application/ChainMind.Application.csproj src/ChainMind.Application/
 COPY src/ChainMind.Core/ChainMind.Core.csproj src/ChainMind.Core/
@@ -9,7 +8,7 @@ COPY src/ChainMind.Infrastructure/ChainMind.Infrastructure.csproj src/ChainMind.
 
 RUN dotnet restore src/ChainMind.Api/ChainMind.Api.csproj
 
-COPY src/ ./src/
+COPY src/ src/
 
 RUN dotnet publish src/ChainMind.Api/ChainMind.Api.csproj -c Release -o /app/publish
 
