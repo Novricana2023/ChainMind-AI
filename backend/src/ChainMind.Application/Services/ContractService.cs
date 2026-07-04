@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using ChainMind.Application.Prompts;
+using ChainMind.Application.Validation;
 using ChainMind.Core.Interfaces;
 using ChainMind.Core.Models;
 
@@ -19,8 +20,14 @@ public class ContractService : IContractService
 
     public async Task<GenerateContractResponse> GenerateContractAsync(GenerateContractRequest request, CancellationToken cancellationToken = default)
     {
-        var code = await _aiProvider.CompleteAsync(AiPrompts.GenerateContract, request.Prompt, cancellationToken);
-        code = CleanCodeBlock(code);
+        var userPrompt = AiPrompts.BuildGenerationUserPrompt(request.Prompt);
+        var code = CleanCodeBlock(await _aiProvider.CompleteAsync(AiPrompts.GenerateContract, userPrompt, cancellationToken));
+
+        if (_aiProvider.ProviderName != "ChainMind")
+        {
+            code = await RefineGeneratedCodeAsync(request.Prompt, code, cancellationToken);
+        }
+
         var name = ExtractContractName(code) ?? "GeneratedContract";
 
         await _analytics.IncrementContractsGeneratedAsync(cancellationToken);
@@ -33,6 +40,30 @@ public class ContractService : IContractService
         ), cancellationToken);
 
         return new GenerateContractResponse(code, name);
+    }
+
+    private async Task<string> RefineGeneratedCodeAsync(string originalPrompt, string code, CancellationToken cancellationToken)
+    {
+        var staticIssues = ContractValidator.Validate(code);
+        var auditResponse = await _aiProvider.CompleteAsync(AiPrompts.AuditContract, code, cancellationToken);
+        var audit = ParseJson<AuditJsonDto>(auditResponse);
+
+        var criticalOrHigh = audit.findings?.Any(f =>
+            f.Severity.Equals("Critical", StringComparison.OrdinalIgnoreCase) ||
+            f.Severity.Equals("High", StringComparison.OrdinalIgnoreCase)) ?? false;
+
+        var lowScore = audit.securityScore > 0 && audit.securityScore < 85;
+        var needsRefine = staticIssues.Count > 0 || criticalOrHigh || lowScore;
+
+        if (!needsRefine)
+            return code;
+
+        var auditDtos = audit.findings?.Select(f =>
+            new AiPrompts.AuditFindingDto(f.Severity, f.Category, f.Title, f.Description, f.Recommendation))
+            ?? Enumerable.Empty<AiPrompts.AuditFindingDto>();
+
+        var fixPrompt = AiPrompts.BuildFixUserPrompt(originalPrompt, code, staticIssues, auditDtos);
+        return CleanCodeBlock(await _aiProvider.CompleteAsync(AiPrompts.FixContract, fixPrompt, cancellationToken));
     }
 
     public async Task<ExplainContractResponse> ExplainContractAsync(ExplainContractRequest request, CancellationToken cancellationToken = default)

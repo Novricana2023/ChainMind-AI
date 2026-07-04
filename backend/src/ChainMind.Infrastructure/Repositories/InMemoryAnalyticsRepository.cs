@@ -15,10 +15,11 @@ public class InMemoryAnalyticsRepository : IAnalyticsRepository
     {
         new("t1", "ERC20 Token", "Standard fungible token with mint/burn", "Token"),
         new("t2", "ERC721 NFT", "Non-fungible token collection", "NFT"),
-        new("t3", "Staking Contract", "Token staking with rewards", "DeFi"),
-        new("t4", "Multi-Sig Wallet", "Multi-signature wallet contract", "Security"),
+        new("t3", "Crop Insurance", "Region-based weather insurance for farmers", "DeFi"),
+        new("t4", "Staking Contract", "Token staking with rewards", "DeFi"),
         new("t5", "DAO Governance", "On-chain voting and proposals", "Governance"),
-        new("t6", "Escrow Contract", "Secure payment escrow", "Utility"),
+        new("t6", "HealingToken", "Non-profit health initiative ERC-20", "Token"),
+        new("t7", "Escrow Contract", "Secure payment escrow", "Utility"),
     };
 
     private readonly object _lock = new();

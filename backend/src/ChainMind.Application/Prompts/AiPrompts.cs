@@ -6,19 +6,67 @@ public static class AiPrompts
         SOLIDITY RULES (mandatory):
         - Solidity ^0.8.20
         - OpenZeppelin Contracts v5.x only
+        - ReentrancyGuard: import "@openzeppelin/contracts/utils/ReentrancyGuard.sol" (NOT security/)
+        - Pausable: import "@openzeppelin/contracts/utils/Pausable.sol"
         - NEVER use Counters.sol (removed in v5) — use uint256 counters
-        - Ownable: always add constructor(address initialOwner) Ownable(initialOwner)
-        - Use custom errors instead of long require strings where practical
+        - NEVER put mapping fields inside structs stored in mappings — use nested mappings at contract level
+        - Ownable: constructor(address initialOwner) Ownable(initialOwner)
+        - Use custom errors instead of string require messages
         - Include SPDX-License-Identifier: MIT
-        - Add NatSpec on public/external functions
-        - Use checks-effects-interactions for external calls
-        - Validate zero addresses and array bounds
+        - Add NatSpec on all public/external functions
+        - Use checks-effects-interactions for external ETH/token transfers
+        - Use nonReentrant on functions that send ETH or call external contracts
+        - Validate zero addresses, empty strings where relevant, and array bounds
+        - Check contract balance before ETH payouts (revert with custom error if insufficient)
+        - Link domain logic correctly (e.g. events per region, not global-only flags)
+        """;
+
+    private const string AntiPatterns = """
+        ANTI-PATTERNS (never do these):
+        - mapping inside struct when struct is in mapping(address => Struct)
+        - weatherEvents[eventType] only, when prompt requires per-region events
+        - single claimed bool when prompt requires one claim per event
+        - require("message") when custom errors are used elsewhere
+        - @openzeppelin/contracts/security/ReentrancyGuard.sol (v4 path)
+        - transfer/send without balance check or reentrancy protection
+        """;
+
+    private const string PreOutputChecklist = """
+        PRE-OUTPUT CHECKLIST (verify before returning code):
+        1. Every requirement in the user request is implemented
+        2. Region/role/state relationships match the domain description
+        3. Access control on admin/oracle functions (onlyOwner or roles)
+        4. Events emitted for state changes
+        5. Custom errors defined and used consistently
+        6. Code compiles with OpenZeppelin v5 imports
+        """;
+
+    private const string ExamplePattern = """
+        EXAMPLE PATTERN (crop insurance — region-linked events):
+        - mapping(string => mapping(string => bool)) reportedEvents; // region => eventType
+        - mapping(address => mapping(string => bool)) claimedEvents; // farmer => eventType
+        - reportEvent(region, eventType) onlyOwner
+        - claimPayout(eventType) checks farmer.region + reportedEvents[region][eventType]
         """;
 
     public static string GenerateContract =>
-        "You are an expert Solidity smart contract developer writing production-ready code.\n" +
-        SolidityRules +
-        "\nReturn ONLY valid Solidity source code. No markdown fences. No explanation text.";
+        """
+        You are an expert Solidity smart contract developer writing production-ready, audit-ready code.
+        """ +
+        SolidityRules + "\n" +
+        AntiPatterns + "\n" +
+        PreOutputChecklist + "\n" +
+        ExamplePattern + "\n" +
+        "Return ONLY valid Solidity source code. No markdown fences. No explanation text.";
+
+    public static string FixContract =>
+        """
+        You are an expert Solidity developer fixing smart contract code based on audit and validation feedback.
+        """ +
+        SolidityRules + "\n" +
+        AntiPatterns + "\n" +
+        "Apply every fix listed in the user message. Preserve the original intent and contract name when possible.\n" +
+        "Return ONLY the complete fixed Solidity source code. No markdown fences. No explanation text.";
 
     public const string ExplainContract = """
         You are a blockchain security educator. Analyze the provided Solidity contract.
@@ -33,7 +81,8 @@ public static class AiPrompts
         {"findings":[{"severity":"Critical|High|Medium|Low|Info","category":"...","title":"...","description":"...","recommendation":"..."}],
         "securityScore":85,"overallAssessment":"..."}
         Check: reentrancy, access control, integer issues, unsafe external calls, missing validations,
-        tx.origin, delegatecall, unchecked blocks, centralization risks, oracle manipulation.
+        tx.origin, delegatecall, unchecked blocks, centralization risks, oracle manipulation,
+        mapping-in-struct bugs, missing balance checks, incorrect domain logic (region/event linking).
         """;
 
     public const string GenerateTests = """
@@ -62,4 +111,41 @@ public static class AiPrompts
         from the contract: Overview, Architecture, Functions, Events, Security Notes, Deployment, Examples.
         Return ONLY Markdown. No code fences wrapping the whole document.
         """;
+
+    public static string BuildGenerationUserPrompt(string userPrompt) =>
+        $"""
+        USER REQUEST:
+        {userPrompt.Trim()}
+
+        Implement every requirement above. Use OpenZeppelin v5, custom errors, NatSpec, and production patterns.
+        """;
+
+    public static string BuildFixUserPrompt(string userPrompt, string code, IEnumerable<string> staticIssues, IEnumerable<AuditFindingDto> auditFindings)
+    {
+        var issues = staticIssues.ToList();
+        foreach (var f in auditFindings.Where(f =>
+            f.Severity.Equals("Critical", StringComparison.OrdinalIgnoreCase) ||
+            f.Severity.Equals("High", StringComparison.OrdinalIgnoreCase) ||
+            f.Severity.Equals("Medium", StringComparison.OrdinalIgnoreCase)))
+        {
+            issues.Add($"[{f.Severity}] {f.Title}: {f.Recommendation}");
+        }
+
+        var issueBlock = issues.Count > 0
+            ? string.Join("\n", issues.Select((issue, i) => $"{i + 1}. {issue}"))
+            : "Review and improve security, domain logic, and OpenZeppelin v5 compliance.";
+
+        return $"""
+            ORIGINAL USER REQUEST:
+            {userPrompt.Trim()}
+
+            CURRENT CODE:
+            {code.Trim()}
+
+            ISSUES TO FIX:
+            {issueBlock}
+            """;
+    }
+
+    public record AuditFindingDto(string Severity, string Category, string Title, string Description, string Recommendation);
 }

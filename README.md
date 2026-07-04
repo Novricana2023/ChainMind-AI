@@ -59,14 +59,18 @@ If the app shows **Failed to fetch**, the frontend cannot reach the API. Usually
 2. Render free tier is sleeping — wait ~60 seconds and try again
 3. `NEXT_PUBLIC_API_URL` missing on Vercel (the app falls back to `chainmind-ai.onrender.com` on `*.vercel.app`)
 
-**Backend:**
+**Backend (recommended for best generation quality):**
 
 | Variable | Values |
 |----------|--------|
-| `AI__Provider` | `ChainMind`, `OpenAI`, `Claude` |
-| `AI__OpenAIApiKey` | OpenAI key |
+| `AI__Provider` | `OpenAI` or `Claude` for custom contracts; `ChainMind` is template-only (ERC-20/NFT) |
+| `AI__OpenAIApiKey` | OpenAI key (required when Provider=OpenAI) |
+| `AI__OpenAIModel` | `gpt-4o` (recommended) |
 | `AI__ClaudeApiKey` | Anthropic key |
 | `Cors__AllowedOrigins__0` | Frontend URL |
+
+Generation uses a **two-pass pipeline** when OpenAI/Claude is configured: generate → audit → auto-fix critical issues.
+Use **Generator templates** in the UI (Crop Insurance, Voting, HealingToken, etc.) for best results.
 
 ## Deployment
 
