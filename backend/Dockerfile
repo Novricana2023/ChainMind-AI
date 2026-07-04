@@ -15,4 +15,10 @@ RUN dotnet publish src/ChainMind.Api/ChainMind.Api.csproj -c Release -o /app/pub
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+COPY --from=build /app/publish .
+
+EXPOSE 10000
+
 CMD ["sh", "-c", "dotnet ChainMind.Api.dll --urls http://0.0.0.0:${PORT:-10000}"]
