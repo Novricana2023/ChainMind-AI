@@ -7,6 +7,7 @@ services:
     rootDir: backend
     buildCommand: dotnet publish src/ChainMind.Api/ChainMind.Api.csproj -c Release -o out
     startCommand: dotnet out/ChainMind.Api.dll
+    healthCheckPath: /health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
@@ -15,4 +16,8 @@ services:
       - key: AI__Provider
         value: ChainMind
       - key: Cors__AllowedOrigins__0
+        value: https://chain-mind-ai.vercel.app
+      - key: Cors__AllowedOrigins__1
+        value: https://chain-mind-ai-eight.vercel.app
+      - key: Cors__AllowedOrigins__2
         value: http://localhost:3000

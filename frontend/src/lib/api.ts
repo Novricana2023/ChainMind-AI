@@ -11,7 +11,7 @@ function resolveApiBase(): string {
 const API_BASE = resolveApiBase();
 const REQUEST_TIMEOUT_MS = 120_000;
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+async function fetchOnce<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -34,7 +34,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
       throw new Error(
-        "Request timed out. The API may be waking up (Render free tier) — wait 60 seconds and try again."
+        "Request timed out. The API may be waking up — wait 60 seconds and try again."
       );
     }
     if (err instanceof TypeError) {
@@ -45,6 +45,16 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw err;
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  try {
+    return await fetchOnce<T>(endpoint, options);
+  } catch (first) {
+    // Retry once after cold start (Render free tier)
+    await new Promise((r) => setTimeout(r, 3000));
+    return fetchOnce<T>(endpoint, options);
   }
 }
 

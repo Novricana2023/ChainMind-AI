@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using ChainMind.Application.Prompts;
 using ChainMind.Core.Interfaces;
 using ChainMind.Core.Models;
 
@@ -18,12 +19,7 @@ public class ContractService : IContractService
 
     public async Task<GenerateContractResponse> GenerateContractAsync(GenerateContractRequest request, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = """
-            You are an expert Solidity smart contract developer. Generate production-quality Solidity code.
-            Use Solidity ^0.8.20, OpenZeppelin where appropriate, include SPDX license, NatSpec comments.
-            Return ONLY the Solidity code without markdown fences or explanation.
-            """;
-        var code = await _aiProvider.CompleteAsync(systemPrompt, request.Prompt, cancellationToken);
+        var code = await _aiProvider.CompleteAsync(AiPrompts.GenerateContract, request.Prompt, cancellationToken);
         code = CleanCodeBlock(code);
         var name = ExtractContractName(code) ?? "GeneratedContract";
 
@@ -41,12 +37,7 @@ public class ContractService : IContractService
 
     public async Task<ExplainContractResponse> ExplainContractAsync(ExplainContractRequest request, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = """
-            You are a blockchain educator. Explain smart contracts clearly.
-            Respond in JSON only with this exact structure:
-            {"summary":"...","businessPurpose":"...","beginnerExplanation":"...","securityConsiderations":["...","..."]}
-            """;
-        var response = await _aiProvider.CompleteAsync(systemPrompt, request.ContractCode, cancellationToken);
+        var response = await _aiProvider.CompleteAsync(AiPrompts.ExplainContract, request.ContractCode, cancellationToken);
         var parsed = ParseJson<ExplainJsonDto>(response);
         var result = new ExplainContractResponse(
             parsed.summary ?? "Contract analysis complete.",
@@ -60,14 +51,7 @@ public class ContractService : IContractService
 
     public async Task<AuditContractResponse> AuditContractAsync(AuditContractRequest request, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = """
-            You are a senior smart contract security auditor. Analyze the contract for vulnerabilities.
-            Respond in JSON only:
-            {"findings":[{"severity":"Critical|High|Medium|Low|Info","category":"...","title":"...","description":"...","recommendation":"..."}],
-            "securityScore":85,"overallAssessment":"..."}
-            Check: reentrancy, access control, integer overflow, unsafe external calls, missing validations.
-            """;
-        var response = await _aiProvider.CompleteAsync(systemPrompt, request.ContractCode, cancellationToken);
+        var response = await _aiProvider.CompleteAsync(AiPrompts.AuditContract, request.ContractCode, cancellationToken);
         var parsed = ParseJson<AuditJsonDto>(response);
         var result = new AuditContractResponse(
             parsed.findings ?? new List<AuditFinding>(),
@@ -98,23 +82,14 @@ public class ContractService : IContractService
 
     public async Task<GenerateTestsResponse> GenerateTestsAsync(GenerateTestsRequest request, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = """
-            You are a Hardhat testing expert. Generate comprehensive tests including unit, integration, and security tests.
-            Use Hardhat, ethers.js, chai. Return ONLY the JavaScript test code without markdown fences.
-            """;
-        var code = await _aiProvider.CompleteAsync(systemPrompt, request.ContractCode, cancellationToken);
+        var code = await _aiProvider.CompleteAsync(AiPrompts.GenerateTests, request.ContractCode, cancellationToken);
         await TrackSessionAsync("Test Generation", "Tests", ExtractContractName(request.ContractCode), cancellationToken);
         return new GenerateTestsResponse(CleanCodeBlock(code));
     }
 
     public async Task<GasAnalysisResponse> AnalyzeGasAsync(GasAnalysisRequest request, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = """
-            You are a gas optimization expert. Analyze the Solidity contract.
-            Respond in JSON only:
-            {"efficiencyScore":75,"estimatedGasUsage":"...","optimizations":[{"title":"...","description":"...","estimatedSavings":"..."}],"summary":"..."}
-            """;
-        var response = await _aiProvider.CompleteAsync(systemPrompt, request.ContractCode, cancellationToken);
+        var response = await _aiProvider.CompleteAsync(AiPrompts.GasAnalysis, request.ContractCode, cancellationToken);
         var parsed = ParseJson<GasJsonDto>(response);
         var result = new GasAnalysisResponse(
             parsed.efficiencyScore > 0 ? parsed.efficiencyScore : 70,
@@ -128,18 +103,11 @@ public class ContractService : IContractService
 
     public async Task<AgentModeResponse> RunAgentModeAsync(AgentModeRequest request, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = """
-            You are a Senior Blockchain Security Engineer conducting a professional audit.
-            Respond in JSON only:
-            {"executiveSummary":"...","recommendations":[{"priority":"Critical|High|Medium|Low","category":"...","recommendation":"...","reasoning":"..."}],
-            "detailedReport":"...","riskScore":65}
-            Be thorough, explain reasoning, provide actionable recommendations.
-            """;
         var userPrompt = request.AdditionalContext != null
             ? $"{request.ContractCode}\n\nAdditional context: {request.AdditionalContext}"
             : request.ContractCode;
 
-        var response = await _aiProvider.CompleteAsync(systemPrompt, userPrompt, cancellationToken);
+        var response = await _aiProvider.CompleteAsync(AiPrompts.AgentMode, userPrompt, cancellationToken);
         var parsed = ParseJson<AgentJsonDto>(response);
         var result = new AgentModeResponse(
             parsed.executiveSummary ?? "Agent review complete.",
@@ -155,12 +123,7 @@ public class ContractService : IContractService
 
     public async Task<GenerateDocumentationResponse> GenerateDocumentationAsync(GenerateDocumentationRequest request, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = """
-            You are a technical writer for Web3 projects. Generate professional Markdown documentation.
-            Include: Overview, Functions, Events, Security Notes, Deployment, Usage Examples.
-            Return ONLY the Markdown content.
-            """;
-        var markdown = await _aiProvider.CompleteAsync(systemPrompt, request.ContractCode, cancellationToken);
+        var markdown = await _aiProvider.CompleteAsync(AiPrompts.Documentation, request.ContractCode, cancellationToken);
         var title = ExtractContractName(request.ContractCode) ?? "Smart Contract";
         await TrackSessionAsync("Documentation", "Docs", title != "Smart Contract" ? title : null, cancellationToken);
         return new GenerateDocumentationResponse(CleanCodeBlock(markdown), title);

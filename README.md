@@ -44,7 +44,20 @@ Runs at `http://localhost:3000`
 
 ## Environment
 
-**Frontend** — `NEXT_PUBLIC_API_URL=http://localhost:5080`
+**Frontend** — `NEXT_PUBLIC_API_URL=https://chainmind-ai.onrender.com` (production) or `http://localhost:5080` (local)
+
+**Vercel (recommended):** Project → Settings → Environment Variables →  
+`NEXT_PUBLIC_API_URL` = `https://chainmind-ai.onrender.com` → Redeploy
+
+**Render backend:** Live API: `https://chainmind-ai.onrender.com`  
+- Root: `https://chainmind-ai.onrender.com/` (status page)  
+- Health: `https://chainmind-ai.onrender.com/health`  
+Do **not** use `chainmind-api.onrender.com` (not deployed).
+
+If the app shows **Failed to fetch**, the frontend cannot reach the API. Usually:
+1. Wrong API URL (`chainmind-api.onrender.com` is not deployed — use `chainmind-ai.onrender.com`)
+2. Render free tier is sleeping — wait ~60 seconds and try again
+3. `NEXT_PUBLIC_API_URL` missing on Vercel (the app falls back to `chainmind-ai.onrender.com` on `*.vercel.app`)
 
 **Backend:**
 
@@ -57,7 +70,7 @@ Runs at `http://localhost:3000`
 
 ## Deployment
 
-**Vercel** — root `frontend`, set `NEXT_PUBLIC_API_URL` to Render backend URL.
+**Vercel** — root `frontend`, set `NEXT_PUBLIC_API_URL` to `https://chainmind-ai.onrender.com`, then redeploy.
 
 **Render** — root `backend`, build `dotnet publish src/ChainMind.Api/ChainMind.Api.csproj -c Release -o out`, start `dotnet out/ChainMind.Api.dll`, set `ASPNETCORE_URLS=http://0.0.0.0:10000`.
 

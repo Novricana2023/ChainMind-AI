@@ -2,12 +2,14 @@ using ChainMind.Application.Services;
 using ChainMind.Core.Interfaces;
 using ChainMind.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.ResponseCompression;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 
 builder.Services.AddScoped<IContractService, ContractService>();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -34,6 +36,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseResponseCompression();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -42,6 +46,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("Frontend");
 app.MapControllers();
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "ChainMind AI API" }));
+app.MapGet("/health", (IAIProvider ai) => Results.Ok(new
+{
+    status = "healthy",
+    service = "ChainMind AI API",
+    aiProvider = ai.ProviderName
+}));
 
 app.Run();

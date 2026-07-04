@@ -1,10 +1,21 @@
 "use client";
 
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Copy, Download, Check } from "lucide-react";
-import { useState } from "react";
+import dynamic from "next/dynamic";
+import { Copy, Download, Check, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+
+const SyntaxHighlighter = dynamic(
+  () => import("react-syntax-highlighter").then((m) => m.Prism),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center py-12 text-gray-400">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    ),
+  }
+);
 
 interface CodeViewerProps {
   code: string;
@@ -14,6 +25,11 @@ interface CodeViewerProps {
 
 export function CodeViewer({ code, language = "solidity", filename }: CodeViewerProps) {
   const [copied, setCopied] = useState(false);
+  const [style, setStyle] = useState<Record<string, React.CSSProperties> | null>(null);
+
+  useEffect(() => {
+    import("react-syntax-highlighter/dist/esm/styles/prism").then((m) => setStyle(m.oneDark));
+  }, []);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);
@@ -47,18 +63,22 @@ export function CodeViewer({ code, language = "solidity", filename }: CodeViewer
           </Button>
         </div>
       </div>
-      <SyntaxHighlighter
-        language={language}
-        style={oneDark}
-        customStyle={{
-          margin: 0,
-          padding: "1rem",
-          background: "rgba(0,0,0,0.4)",
-          fontSize: "0.8125rem",
-        }}
-      >
-        {code}
-      </SyntaxHighlighter>
+      {style ? (
+        <SyntaxHighlighter
+          language={language}
+          style={style}
+          customStyle={{
+            margin: 0,
+            padding: "1rem",
+            background: "rgba(0,0,0,0.4)",
+            fontSize: "0.8125rem",
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
+      ) : (
+        <pre className="p-4 text-sm font-mono text-gray-300 overflow-x-auto bg-black/40">{code}</pre>
+      )}
     </div>
   );
 }

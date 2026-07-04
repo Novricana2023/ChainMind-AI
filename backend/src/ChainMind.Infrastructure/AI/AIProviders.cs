@@ -508,12 +508,13 @@ public class OpenAIProvider : IAIProvider
         var request = new
         {
             model = _settings.OpenAIModel,
+            max_tokens = 4096,
             messages = new[]
             {
                 new { role = "system", content = systemPrompt },
                 new { role = "user", content = userPrompt }
             },
-            temperature = 0.3
+            temperature = 0.2
         };
 
         var json = JsonSerializer.Serialize(request);
