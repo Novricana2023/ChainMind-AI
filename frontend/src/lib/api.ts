@@ -3,7 +3,7 @@ function resolveApiBase(): string {
     return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
   }
   if (typeof window !== "undefined" && window.location.hostname.endsWith(".vercel.app")) {
-    return "https://chainmind-api.onrender.com";
+    return "https://chainmind-ai.onrender.com";
   }
   return "http://localhost:5080";
 }
